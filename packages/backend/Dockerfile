@@ -31,17 +31,18 @@ RUN cd packages/backend && bun run bin/syncStaticAssets.ts
 # Compila il backend come eseguibile standalone
 RUN bun build --compile --minify --sourcemap ./packages/backend/src/bun.index.ts --outfile nordcraft-backend
 
-
-
 # ==========================================
-# Runtime Stage - Prova Debian invece di Distroless
+# Runtime Stage - Con strumenti di debug
 # ==========================================
 FROM debian:12-slim AS runner
 
-# Installa solo le dipendenze minime necessarie
+# Installa tools di debug + ca-certificates
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     ca-certificates \
+    curl \
+    iputils-ping \
+    dnsutils \
     && rm -rf /var/lib/apt/lists/*
 
 # Variabili d'ambiente
@@ -61,6 +62,20 @@ COPY --from=build /app/packages/backend/dist/ .
 
 # Copia __project__
 COPY --from=build /app/packages/backend/__project__/ ./__project__/
+
+# Script di test della connettività (esegui manualmente dopo il deploy)
+RUN echo '#!/bin/sh\n\
+    echo "=== TEST CONNETTIVITÀ ==="\n\
+    echo "1. Test DNS:"\n\
+    nslookup owen-wilson-wow-api.onrender.com || echo "DNS FAILED"\n\
+    echo ""\n\
+    echo "2. Test ping (potrebbe non funzionare):"\n\
+    ping -c 2 8.8.8.8 || echo "PING FAILED"\n\
+    echo ""\n\
+    echo "3. Test HTTPS:"\n\
+    curl -v https://owen-wilson-wow-api.onrender.com/wows/random || echo "CURL FAILED"\n\
+    echo ""\n\
+    echo "=== FINE TEST ==="\n' > /test-network.sh && chmod +x /test-network.sh
 
 # Avvia l'applicazione
 ENTRYPOINT ["./nordcraft-backend"]
