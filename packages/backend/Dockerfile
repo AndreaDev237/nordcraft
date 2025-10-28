@@ -31,8 +31,7 @@ RUN cd packages/backend && bun run bin/syncStaticAssets.ts
 # Compila il backend come eseguibile standalone
 RUN bun build --compile --minify --sourcemap ./packages/backend/src/bun.index.ts --outfile nordcraft-backend
 
-# Test: verifica che il binario possa fare fetch in fase di build
-RUN ./nordcraft-backend --version || echo "Binary check done"
+
 
 # ==========================================
 # Runtime Stage - Prova Debian invece di Distroless
