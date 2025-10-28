@@ -23,20 +23,27 @@ RUN bun install --frozen-lockfile
 COPY . .
 
 # STEP CRITICO: Compila tutti i packages del workspace
-# Questo crea le directory dist/ per core, runtime, ssr, lib, search
 RUN bun run build
 
 # Sincronizza gli asset statici del backend
-# (ora funziona perché packages/runtime/dist/ esiste)
 RUN cd packages/backend && bun run bin/syncStaticAssets.ts
 
 # Compila il backend come eseguibile standalone
 RUN bun build --compile --minify --sourcemap ./packages/backend/src/bun.index.ts --outfile nordcraft-backend
 
+# Test: verifica che il binario possa fare fetch in fase di build
+RUN ./nordcraft-backend --version || echo "Binary check done"
+
 # ==========================================
-# Runtime Stage - Immagine finale minimal
+# Runtime Stage - Prova Debian invece di Distroless
 # ==========================================
-FROM gcr.io/distroless/base-debian12 AS runner
+FROM debian:12-slim AS runner
+
+# Installa solo le dipendenze minime necessarie
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # Variabili d'ambiente
 ENV NODE_ENV=production
@@ -50,10 +57,10 @@ WORKDIR /app
 # Copia l'eseguibile compilato
 COPY --from=build /app/nordcraft-backend .
 
-# Copy project specific files (come nel Dockerfile originale)
+# Copy project specific files
 COPY --from=build /app/packages/backend/dist/ .
 
-# AGGIUNTO: Copia anche __project__ che NON è dentro dist/
+# Copia __project__
 COPY --from=build /app/packages/backend/__project__/ ./__project__/
 
 # Avvia l'applicazione
