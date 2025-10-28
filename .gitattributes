@@ -1,0 +1,2 @@
+﻿# Usa merge strategy "ours" per il progetto custom
+packages/backend/__project__/project.json merge=ours
