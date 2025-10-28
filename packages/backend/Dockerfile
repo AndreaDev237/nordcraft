@@ -50,8 +50,11 @@ WORKDIR /app
 # Copia l'eseguibile compilato
 COPY --from=build /app/nordcraft-backend .
 
-# Copia la directory dist con gli asset statici
-COPY --from=build /app/packages/backend/dist/ ./dist/
+# Copy project specific files (come nel Dockerfile originale)
+COPY --from=build /app/packages/backend/dist/ .
+
+# AGGIUNTO: Copia anche __project__ che NON è dentro dist/
+COPY --from=build /app/packages/backend/__project__/ ./__project__/
 
 # Avvia l'applicazione
 ENTRYPOINT ["./nordcraft-backend"]
